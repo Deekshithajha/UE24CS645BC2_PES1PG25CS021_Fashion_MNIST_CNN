@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from tensorflow.keras.datasets import fashion_mnist
 
 print("CNN Assignment Started")
@@ -9,7 +10,7 @@ print("CNN Assignment Started")
 
 (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
 
-# Normalize
+# Normalize pixel values
 x_train = x_train / 255.0
 x_test = x_test / 255.0
 
@@ -27,8 +28,6 @@ print("Testing images shape:", x_test.shape)
 class ConvLayer:
     def __init__(self, num_filters):
         self.num_filters = num_filters
-
-        # 3x3 filters
         self.filters = np.random.randn(num_filters, 3, 3) / 9
 
     def iterate_regions(self, image):
@@ -58,7 +57,6 @@ class ConvLayer:
             for f in range(self.num_filters):
                 d_L_d_filters[f] += d_L_d_out[i, j, f] * region
 
-        # Update filters
         self.filters -= learning_rate * d_L_d_filters
 
         return None
@@ -157,7 +155,6 @@ class Softmax:
 
             d_L_d_inputs = d_t_d_inputs @ d_L_d_t
 
-            # Update weights and biases
             self.weights -= learning_rate * d_L_d_w
             self.biases -= learning_rate * d_L_d_b
 
@@ -176,14 +173,12 @@ softmax = Softmax(13 * 13 * 8, 10)
 # =========================
 
 def forward(image, label):
-    out = conv.forward((image[:, :, 0]))
+    out = conv.forward(image[:, :, 0])
     out = pool.forward(out)
     out = softmax.forward(out)
 
-    # Loss
     loss = -np.log(out[label])
 
-    # Accuracy
     acc = 1 if np.argmax(out) == label else 0
 
     return out, loss, acc
@@ -193,14 +188,12 @@ def forward(image, label):
 # =========================
 
 def train(image, label, lr=0.005):
-    # Forward
+
     out, loss, acc = forward(image, label)
 
-    # Initial gradient
     gradient = np.zeros(10)
     gradient[label] = -1 / out[label]
 
-    # Backward
     gradient = softmax.backward(gradient, lr)
     gradient = pool.backward(gradient)
     conv.backward(gradient, lr)
@@ -208,18 +201,25 @@ def train(image, label, lr=0.005):
     return loss, acc
 
 # =========================
-# TRAINING LOOP
+# TRAINING
 # =========================
 
 print("\n--- TRAINING STARTED ---\n")
 
 epochs = 3
 
+train_losses = []
+train_accuracies = []
+
 for epoch in range(epochs):
-    print(f"Epoch {epoch + 1}")
+
+    print(f"\nEpoch {epoch + 1}")
 
     loss = 0
     num_correct = 0
+
+    epoch_loss = 0
+    epoch_acc = 0
 
     for i, (image, label) in enumerate(zip(x_train[:1000], y_train[:1000])):
 
@@ -227,6 +227,9 @@ for epoch in range(epochs):
 
         loss += l
         num_correct += acc
+
+        epoch_loss += l
+        epoch_acc += acc
 
         if i % 100 == 99:
             print(
@@ -237,6 +240,25 @@ for epoch in range(epochs):
 
             loss = 0
             num_correct = 0
+
+    avg_epoch_loss = epoch_loss / 1000
+    avg_epoch_accuracy = (epoch_acc / 1000) * 100
+
+    train_losses.append(avg_epoch_loss)
+    train_accuracies.append(avg_epoch_accuracy)
+
+# =========================
+# TRAINING SUMMARY TABLE
+# =========================
+
+print("\n==============================")
+print("TRAINING SUMMARY")
+print("==============================")
+
+print(f"{'Epoch':<10}{'Loss':<15}{'Accuracy (%)':<15}")
+
+for i in range(epochs):
+    print(f"{i+1:<10}{train_losses[i]:<15.4f}{train_accuracies[i]:<15.2f}")
 
 # =========================
 # TESTING
@@ -253,7 +275,31 @@ for image, label in zip(x_test[:100], y_test[:100]):
     loss += l
     num_correct += acc
 
-print("Test Loss:", loss / 100)
+print("Test Loss:", round(loss / 100, 4))
 print("Test Accuracy:", num_correct, "%")
 
 print("\nCNN Assignment Completed")
+
+# =========================
+# PLOT TRAINING GRAPHS
+# =========================
+
+epochs_range = range(1, epochs + 1)
+
+# Loss Graph
+plt.figure(figsize=(8, 5))
+plt.plot(epochs_range, train_losses, marker='o')
+plt.title("Training Loss vs Epochs")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.grid(True)
+plt.show()
+
+# Accuracy Graph
+plt.figure(figsize=(8, 5))
+plt.plot(epochs_range, train_accuracies, marker='o')
+plt.title("Training Accuracy vs Epochs")
+plt.xlabel("Epochs")
+plt.ylabel("Accuracy (%)")
+plt.grid(True)
+plt.show()

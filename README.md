@@ -92,7 +92,9 @@ Output Prediction (10 Classes)
 The model successfully learns during training and achieves approximately:
 Training Accuracy: ~80%
 Testing Accuracy: ~68%
+## Training Output Screenshot
 
+![CNN Output](output.png)
 # How To Run The Project
 ## Step 1:
 Clone the repository:
